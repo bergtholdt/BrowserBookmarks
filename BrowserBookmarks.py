@@ -209,7 +209,7 @@ class BookmarksManager(object):
     
 class BookmarksFirefox(BookmarksManager):
     def get_bookmark_urls():
-        root = "/home/sven.fr/.mozilla/firefox/5ssz988r.default/bookmarkbackups"
+        # root = "/home/sven.fr/.mozilla/firefox/5ssz988r.default/bookmarkbackups"
         jsonFileNames = os.listdir(root)
         jsonFileNames.sort()
         filePath = os.path.join( root, jsonFileNames[-1])
@@ -250,8 +250,8 @@ class BookmarksFirefox(BookmarksManager):
 
         return returnList
 
-    def bookmarks(self):
-        '''return all bookmarks from firefox
+    def _findJsonFilepath(self):
+        '''return the filepath to the json file
         '''
         profilename = self.settings().get("firefox-profile")
         appData = os.getenv('APPDATA')
@@ -259,6 +259,10 @@ class BookmarksFirefox(BookmarksManager):
 
         profilesDir = os.path.join(appData, 'Mozilla', 'Firefox', 'Profiles')
         profileDirname = None
+
+        if not os.path.exists(profilesDir):
+            return
+
         for name in  os.listdir(profilesDir):
             if name.find(profilename) != -1:
                 profileDirname = name
@@ -268,14 +272,30 @@ class BookmarksFirefox(BookmarksManager):
         bookmarkBackupDirectory = os.path.join(profilesDir , profileDirname, 'bookmarkbackups')
         log('bookmarkBackupDirectory=%s' % bookmarkBackupDirectory, 6)
 
+        if not os.path.exists(bookmarkBackupDirectory):
+            return
+
         backupfiles = os.listdir(bookmarkBackupDirectory)
+
+        if len(backupfiles) == 0:
+            return
+
         backupfiles.sort()
         backupFilename = backupfiles[-1]
         backupFilePath = os.path.join(bookmarkBackupDirectory, backupFilename)
 
         log('backupFilePath=%s' % backupFilePath, 6)
+        return backupFilePath
 
-        fs = open(backupFilePath,'r')
+    def bookmarks(self):
+        '''return all bookmarks from firefox
+        '''
+        bookmarkFile = self._findJsonFilepath()
+
+        if bookmarkFile is None:
+            return []
+
+        fs = open(bookmarkFile,'r')
         rootBookmark = json.load(fs)
         fs.close()
 
@@ -311,13 +331,21 @@ class BookmarksFirefox(BookmarksManager):
 
         return []
 
-
 class BookmarksChrome(BookmarksManager):
+    def _findJsonFilepath(self):
+        localAppData = os.getenv('LOCALAPPDATA')
+        bookmarks = os.path.join(localAppData, 'Google', 'Chrome', 'User Data', 'Default', 'bookmarks')
+
+        if os.path.exists(bookmarks):
+            return bookmarks
+
+
     def bookmarks(self):
         '''return all bookmarks from the manager
         '''
-        localAppData = os.getenv('LOCALAPPDATA')
-        bookmarks = os.path.join(localAppData, 'Google', 'Chrome', 'User Data', 'Default', 'bookmarks')
+        bookmarks = self._findJsonFilepath()
+        if bookmarks is None:
+            return []
 
         # bookmarks = r'C:\Users\sven\AppData\Local\Google\Chrome\User Data\Default\bookmarks'
         fs = open(bookmarks, 'r')
