@@ -1,3 +1,5 @@
 {
-	"chrome": true
+	"chrome": true,
+	"firefox" : true,
+	"firefox-profile" : "default"
 }

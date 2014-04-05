@@ -1,10 +1,9 @@
-import json, os, subprocess
+import json, os, subprocess, webbrowser
 import sublime_plugin, sublime
 import urllib.parse as urlparse
-import webbrowser
-import os
 
 VERBOSE = 6
+
 def log(message,verbose=1):
     '''print a message with verbose limit
     '''
@@ -76,6 +75,16 @@ class Bookmark(object):
         '''
         self._name = value
     
+    def children(self):
+        '''get children
+        '''
+        return self._children
+    
+    def setChildren(self, value):
+        '''set children
+        '''
+        self._children = value
+
     def grandParents(self):
         '''return all grandParents
         '''
@@ -97,40 +106,18 @@ class Bookmark(object):
             grandChildren += subchilds
 
         return grandChildren
-        
-    def children(self):
-        '''get children
-        '''
-        return self._children
     
-    def setChildren(self, value):
-        '''set children
-        '''
-        self._children = value
-    
-class BookmarkFirefox(object):
-    def __init__(self, dataDict):
-        self._dataDict = dataDict
-
-    def dataDict(self):
-        '''get dataDict
-        '''
-        return self._dataDict
-    
-    def setDataDict(self, value):
-        '''set dataDict
-        '''
-        self._dataDict = value
+class BookmarkFirefox(Bookmark):
 
     def type(self):
         dataDict = self.dataDict()
         return dataDict['type']
 
-    def title(self):
+    def name(self):
         dataDict = self.dataDict()
         return dataDict['title']  
 
-    def uri(self):
+    def url(self):
         dataDict = self.dataDict()
         if 'uri' not in dataDict:
             return None
@@ -156,7 +143,9 @@ class BookmarkFirefox(object):
         childs = dataDict['children']
         children = []
         for child in childs:
-            children.append(BookMark(child))
+            childBookmark = BookmarkFirefox(child)
+            childBookmark.setParent(self)
+            children.append(childBookmark)
 
         return children
 
@@ -204,11 +193,23 @@ class BookmarkChrome(Bookmark):
 
         return children
 
+class BookmarksManager(object):
+    def __init__(self,settings=None):
+        self._settings = settings
 
-
-class BookmarksFirefox(object):
+    def settings(self):
+        '''get settings
+        '''
+        return self._settings
+    
+    def setSettings(self, value):
+        '''set settings
+        '''
+        self._settings = value
+    
+class BookmarksFirefox(BookmarksManager):
     def get_bookmark_urls():
-        root = '/home/sven.fr/.mozilla/firefox/5ssz988r.default/bookmarkbackups'
+        root = "/home/sven.fr/.mozilla/firefox/5ssz988r.default/bookmarkbackups"
         jsonFileNames = os.listdir(root)
         jsonFileNames.sort()
         filePath = os.path.join( root, jsonFileNames[-1])
@@ -249,8 +250,72 @@ class BookmarksFirefox(object):
 
         return returnList
 
-class BookmarksChrome():
     def bookmarks(self):
+        '''return all bookmarks from firefox
+        '''
+        profilename = self.settings().get("firefox-profile")
+        appData = os.getenv('APPDATA')
+        log('appData=%s' % appData, 6)
+
+        profilesDir = os.path.join(appData, 'Mozilla', 'Firefox', 'Profiles')
+        profileDirname = None
+        for name in  os.listdir(profilesDir):
+            if name.find(profilename) != -1:
+                profileDirname = name
+
+        log('profileDirname=%s' % profileDirname, 6)
+
+        bookmarkBackupDirectory = os.path.join(profilesDir , profileDirname, 'bookmarkbackups')
+        log('bookmarkBackupDirectory=%s' % bookmarkBackupDirectory, 6)
+
+        backupfiles = os.listdir(bookmarkBackupDirectory)
+        backupfiles.sort()
+        backupFilename = backupfiles[-1]
+        backupFilePath = os.path.join(bookmarkBackupDirectory, backupFilename)
+
+        log('backupFilePath=%s' % backupFilePath, 6)
+
+        fs = open(backupFilePath,'r')
+        rootBookmark = json.load(fs)
+        fs.close()
+
+        # bookmarks = json.dumps(rootBookmark, sort_keys=True ,ensure_ascii=True ,indent=4)
+        # print(bookmarks)
+        bm = BookmarkFirefox(rootBookmark)
+        childs = bm.grandChildren()
+        log('childs=%s' % len(childs), 6)
+
+        returnList = []
+
+        for child in childs:
+            url = child.url()
+            if url:
+                if url.find('place') != -1:
+                    continue
+            log('url=%s' % url, 6)
+            title = child.name()
+            if not title or title == '':
+                parsed_url = urlparse.urlparse( url )
+                domain = '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_url)
+                domain = domain.replace('http://','')
+                domain = domain.replace('https://','')
+                domain = domain.replace('/','')
+                log(domain)
+                title = domain
+
+            if url:
+                returnList.append( child )
+            
+
+        return returnList
+
+        return []
+
+
+class BookmarksChrome(BookmarksManager):
+    def bookmarks(self):
+        '''return all bookmarks from the manager
+        '''
         localAppData = os.getenv('LOCALAPPDATA')
         bookmarks = os.path.join(localAppData, 'Google', 'Chrome', 'User Data', 'Default', 'bookmarks')
 
@@ -283,11 +348,30 @@ class ShowBookmarksCommand(sublime_plugin.WindowCommand):
 
     def collectBookmarks(self):
         returnBookmarks = []
-        if self.settings().get("chrome") is True:
-            chrome = BookmarksChrome()
+        settings = self.settings()
+
+        chromeOn = settings.get("chrome")
+        firefoxOn = settings.get("firefox")
+
+        log('chromeOn=%s' % chromeOn, 6)
+        log('firefoxOn=%s' % firefoxOn, 6)
+        
+        # chrome
+        if chromeOn is True:
+            chrome = BookmarksChrome(settings)
+
             for bookmark in chrome.bookmarks():
                 if bookmark.type() != 'folder':
                     returnBookmarks.append(bookmark)
+
+        # firefox
+        if firefoxOn is True:
+            firefox = BookmarksFirefox(settings)
+            for bookmark in firefox.bookmarks():
+                if bookmark.type() != 'folder':
+                    returnBookmarks.append(bookmark)
+
+        
 
         return returnBookmarks
 
@@ -337,7 +421,7 @@ class ShowBookmarksCommand(sublime_plugin.WindowCommand):
             hierarchy = None
             if len(parents) > 0:
                 parents.reverse()
-
+                blacklist = [None,'']
                 hierarchy = '>'.join ( [parent.name() for parent in parents] )
 
             displayList = [title]
