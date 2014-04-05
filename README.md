@@ -14,6 +14,6 @@ download the package from [GitHub](https://github.com/svenfraeys/SublimeFoldPyth
  
 ## Settings
 In the settings you can change several parameters
-* `chrome` : List bookmarks of google chrome
-* `firefox` : List bookmarks of firefox
+* `chrome` : Enable / disable google chrome bookmarks
+* `firefox` : Enable / disable mozilla firefox bookmarks
 * `firefox-profile` : The profile of firefox that you want to load. 'default' is used by default in firefox
