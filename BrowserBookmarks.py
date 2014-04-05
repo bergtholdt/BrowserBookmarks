@@ -1,6 +1,9 @@
-import json, os, subprocess, webbrowser
+import json, os, subprocess, webbrowser, sys
 import sublime_plugin, sublime
-import urllib.parse as urlparse
+if sys.version_info[0] >= 3:
+    import urllib.parse as urlparse
+else:
+    import urlparse
 
 VERBOSE = 6
 
@@ -314,7 +317,7 @@ class BookmarksFirefox(BookmarksManager):
                     continue
             log('url=%s' % url, 6)
             title = child.name()
-            if not title or title == '':
+            if (not title or title == '') and url is not None:
                 parsed_url = urlparse.urlparse( url )
                 domain = '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_url)
                 domain = domain.replace('http://','')
