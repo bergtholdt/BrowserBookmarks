@@ -7,7 +7,7 @@ if sys.version_info[0] >= 3:
 else:
     import urlparse
 
-VERBOSE = 6
+VERBOSE = 0
 
 def log(message,verbose=1):
     '''print a message with verbose limit
@@ -218,6 +218,9 @@ class BookmarksManager(object):
         '''set settings
         '''
         self._settings = value
+
+    def error(self, message):
+        print('Error : %s' % message)
     
 class BookmarksFirefox(BookmarksManager):
     '''bookmarks manager of firefox
@@ -278,6 +281,7 @@ class BookmarksFirefox(BookmarksManager):
         profileDirname = None
 
         if not os.path.exists(profilesDir):
+            self.error("firefox profile directory does not exist '%s'" % profilesDir)
             return
 
         for name in  os.listdir(profilesDir):
@@ -285,6 +289,10 @@ class BookmarksFirefox(BookmarksManager):
                 profileDirname = name
 
         log('profileDirname=%s' % profileDirname, 6)
+
+        if profileDirname is None:
+            self.error("no firefox profile found %s" % profilename,1)
+            return []
 
         bookmarkBackupDirectory = os.path.join(profilesDir , profileDirname, 'bookmarkbackups')
         log('bookmarkBackupDirectory=%s' % bookmarkBackupDirectory, 6)
@@ -297,11 +305,13 @@ class BookmarksFirefox(BookmarksManager):
         bookmarkBackupDirectory = self._findBookmarkbackups()
 
         if not os.path.exists(bookmarkBackupDirectory):
+            self.error("bookmarkBackupDirectory does not exist '%s'" % bookmarkFile)
             return
 
         backupfiles = os.listdir(bookmarkBackupDirectory)
 
         if len(backupfiles) == 0:
+            self.error("no backup bookmark files found in %s" % bookmarkBackupDirectory)
             return
 
         backupfiles.sort()
@@ -319,9 +329,14 @@ class BookmarksFirefox(BookmarksManager):
         if bookmarkFile is None:
             return []
 
-        fs = open(bookmarkFile,'r')
-        rootBookmark = json.load(fs)
-        fs.close()
+        rootBookmark = None
+        try:
+            fs = open(bookmarkFile,'r')
+            rootBookmark = json.load(fs)
+            fs.close()
+        except:
+            self.error("could not open file '%s'" % bookmarkFile)
+            return []
 
         # bookmarks = json.dumps(rootBookmark, sort_keys=True ,ensure_ascii=True ,indent=4)
         # print(bookmarks)
@@ -362,6 +377,10 @@ class BookmarksChrome(BookmarksManager):
         bookmarksFile = self.settings().get("chrome-bookmarks-file")
         log('bookmarksFile=%s' % bookmarksFile, 6)
         if bookmarksFile:
+            if not os.path.exists(bookmarksFile):
+                self.error("chrome bookmarks file does not exist %s" % bookmarksFile)
+                return
+
             return bookmarksFile
 
         localAppData = os.getenv('LOCALAPPDATA')
@@ -369,6 +388,8 @@ class BookmarksChrome(BookmarksManager):
 
         if os.path.exists(bookmarks):
             return bookmarks
+        else:
+            self.error("chrome bookmarks file does not exist %s" % bookmarks)
 
 
     def bookmarks(self):
@@ -422,15 +443,24 @@ class ShowBookmarksCommand(sublime_plugin.WindowCommand):
         # chrome
         if chromeOn is True:
             chrome = BookmarksChrome(settings)
+            bookmarks = chrome.bookmarks()
 
-            for bookmark in chrome.bookmarks():
+            if len(bookmarks) == 0:
+                print("Warning : Chrome returned zero bookmarks but is active in the system")
+
+            for bookmark in bookmarks:
                 if bookmark.type() != 'folder':
                     returnBookmarks.append(bookmark)
 
         # firefox
         if firefoxOn is True:
             firefox = BookmarksFirefox(settings)
-            for bookmark in firefox.bookmarks():
+            bookmarks = firefox.bookmarks()
+
+            if len(bookmarks) == 0:
+                print("Warning : Firefox returned zero bookmarks but is active in the system")
+
+            for bookmark in bookmarks:
                 if bookmark.type() != 'folder':
                     returnBookmarks.append(bookmark)
 
@@ -500,7 +530,6 @@ class ShowBookmarksCommand(sublime_plugin.WindowCommand):
         sublime.active_window().show_quick_panel(quickPanelData, self.handleHelpSelect)
 
         return
-        
 
 # get_bookmark_urls()
 
