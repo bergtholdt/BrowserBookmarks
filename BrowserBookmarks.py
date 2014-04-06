@@ -1,5 +1,7 @@
 import json, os, subprocess, webbrowser, sys
 import sublime_plugin, sublime
+
+# python check
 if sys.version_info[0] >= 3:
     import urllib.parse as urlparse
 else:
@@ -20,6 +22,8 @@ def browse_to(url):
     # subprocess.Popen(['iceweasel','-new-tab',url])
 
 class Bookmark(object):
+    '''bookmark base functionality
+    '''
     def __init__(self, dataDict=None):
         self._dataDict = dataDict
         self._name    = None
@@ -111,7 +115,8 @@ class Bookmark(object):
         return grandChildren
     
 class BookmarkFirefox(Bookmark):
-
+    '''bookmark of firefox
+    '''
     def type(self):
         dataDict = self.dataDict()
         return dataDict['type']
@@ -153,6 +158,8 @@ class BookmarkFirefox(Bookmark):
         return children
 
 class BookmarkChrome(Bookmark):
+    '''bookmark of chrome
+    '''
     def __init__(self, dataDict):
         super(BookmarkChrome, self).__init__(dataDict)
         self._dataDict = dataDict
@@ -197,6 +204,8 @@ class BookmarkChrome(Bookmark):
         return children
 
 class BookmarksManager(object):
+    '''base manager of bookmarks
+    '''
     def __init__(self,settings=None):
         self._settings = settings
 
@@ -211,6 +220,8 @@ class BookmarksManager(object):
         self._settings = value
     
 class BookmarksFirefox(BookmarksManager):
+    '''bookmarks manager of firefox
+    '''
     def get_bookmark_urls():
         # root = "/home/sven.fr/.mozilla/firefox/5ssz988r.default/bookmarkbackups"
         jsonFileNames = os.listdir(root)
@@ -253,9 +264,12 @@ class BookmarksFirefox(BookmarksManager):
 
         return returnList
 
-    def _findJsonFilepath(self):
-        '''return the filepath to the json file
-        '''
+    def _findBookmarkbackups(self):
+        bookmarkBackupsDirectory = self.settings().get("firefox-bookmarkbackups-directory")
+
+        if bookmarkBackupsDirectory:
+            return bookmarkBackupsDirectory
+
         profilename = self.settings().get("firefox-profile")
         appData = os.getenv('APPDATA')
         log('appData=%s' % appData, 6)
@@ -274,6 +288,13 @@ class BookmarksFirefox(BookmarksManager):
 
         bookmarkBackupDirectory = os.path.join(profilesDir , profileDirname, 'bookmarkbackups')
         log('bookmarkBackupDirectory=%s' % bookmarkBackupDirectory, 6)
+
+        return bookmarkBackupDirectory
+        
+    def _findJsonFilepath(self):
+        '''return the filepath to the json file
+        '''
+        bookmarkBackupDirectory = self._findBookmarkbackups()
 
         if not os.path.exists(bookmarkBackupDirectory):
             return
@@ -335,7 +356,14 @@ class BookmarksFirefox(BookmarksManager):
         return []
 
 class BookmarksChrome(BookmarksManager):
+    '''bookmark manager of chrome
+    '''
     def _findJsonFilepath(self):
+        bookmarksFile = self.settings().get("chrome-bookmarks-file")
+        log('bookmarksFile=%s' % bookmarksFile, 6)
+        if bookmarksFile:
+            return bookmarksFile
+
         localAppData = os.getenv('LOCALAPPDATA')
         bookmarks = os.path.join(localAppData, 'Google', 'Chrome', 'User Data', 'Default', 'bookmarks')
 
@@ -371,6 +399,8 @@ class BookmarksChrome(BookmarksManager):
         return bookmarks
 
 class ShowBookmarksCommand(sublime_plugin.WindowCommand):
+    '''sublime show bookmarks command
+    '''
     def settings(self):
         '''return if the fold getters and setters is active or not
         '''
@@ -378,6 +408,8 @@ class ShowBookmarksCommand(sublime_plugin.WindowCommand):
         return settings
 
     def collectBookmarks(self):
+        '''get all bookmarks from active browsers
+        '''
         returnBookmarks = []
         settings = self.settings()
 
@@ -420,15 +452,14 @@ class ShowBookmarksCommand(sublime_plugin.WindowCommand):
         browse_to( uri )
 
     def run(self):
-        log('help',1)
-        
+        '''start the sublime process
+        '''
         quickPanelData = []
         bookmarks = self.collectBookmarks()
         log('bookmarks=%s' % bookmarks, 6)
 
 
         for bookmark in bookmarks:
-            
             title = bookmark.name()
             url = bookmark.url()
             title = bookmark.name()
@@ -469,11 +500,7 @@ class ShowBookmarksCommand(sublime_plugin.WindowCommand):
         sublime.active_window().show_quick_panel(quickPanelData, self.handleHelpSelect)
 
         return
-        bookmarks = get_bookmark_urls()
-        log(bookmarks,1)
-        label = [bookmark for bookmark in bookmarks]
-        log(label,1)
-        sublime.active_window().show_quick_panel(bookmarks, self.handleHelpSelect)
+        
 
 # get_bookmark_urls()
 
