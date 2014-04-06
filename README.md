@@ -2,6 +2,8 @@ BrowserBookmarks
 ================
 #### Quick access to your bookmarks from your favorite browser
 
+![alt tag](https://dl.dropboxusercontent.com/u/1652825/code/sublime/browserBookmarks/browserBookmarks.png)
+
 ## Intro
 Access your bookmarks from your browser (firefox, chrome) in Sublime Text.
 At the moment there is only a support for windows.
