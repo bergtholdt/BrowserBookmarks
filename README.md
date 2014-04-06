@@ -17,3 +17,5 @@ In the settings you can change several parameters
 * `chrome` : Enable / disable google chrome bookmarks
 * `firefox` : Enable / disable mozilla firefox bookmarks
 * `firefox-profile` : The profile of firefox that you want to load. 'default' is used by default in firefox
+* `chrome-bookmarks-file` : override the bookmark file for chrome, if my system can not find a correct bookmark file
+* `firefox-bookmarkbackups-directory` : override the bookmarkbackups directory for firefox, if my system can not find a correct bookmark file
