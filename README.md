@@ -1,6 +1,6 @@
 BrowserBookmarks
 ================
-#### Quick access to your bookmarks from your favorite browser
+#### Quick access to your bookmarks from your favorite browser (firefox, chrome)
 
 ![alt tag](https://dl.dropboxusercontent.com/u/1652825/code/sublime/browserBookmarks/browserBookmarks.png)
 
