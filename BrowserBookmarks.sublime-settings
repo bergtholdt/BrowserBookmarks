@@ -5,6 +5,7 @@
 	
 	// chrome settings
 	"chrome-bookmarks-file" : null, 				// use this to fore a bookmarks json filepath (if automatic system does not work)
+	"chrome-bookmarks-encoding" : "utf8",			// utf8, cp1252, ...
 
 	// firefox settings
 	"firefox-profile" : "default",					// profile name of firefox, default is "deault"

@@ -400,7 +400,8 @@ class BookmarksChrome(BookmarksManager):
             return []
 
         # bookmarks = r'C:\Users\sven\AppData\Local\Google\Chrome\User Data\Default\bookmarks'
-        fs = open(bookmarks, 'r')
+        encoding = self.settings().get("chrome-bookmarks-encoding")
+        fs = open(bookmarks, 'r', encoding=encoding)
         dataDict = json.load(fs)
         fs.close()
 
